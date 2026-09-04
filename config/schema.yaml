@@ -1,0 +1,200 @@
+database: social_analytics_dw
+target_engine: duckdb   # duckdb | postgres
+
+# -----------------------------------------------------------------------
+# Conventions techniques injectées automatiquement selon la couche.
+# Modifier ici propage le changement à TOUTES les tables concernées.
+# -----------------------------------------------------------------------
+conventions:
+  staging_columns:
+    - {name: ingested_at,  type: TIMESTAMP, nullable: false, default: CURRENT_TIMESTAMP, description: "Date de réception en zone de staging"}
+    - {name: source_file,  type: VARCHAR,   nullable: true,                              description: "Nom du fichier ou export source d'origine"}
+
+  scd2_columns:   # Slowly Changing Dimension type 2 : on garde l'historique
+    - {name: load_date,       type: TIMESTAMP, nullable: false, default: CURRENT_TIMESTAMP, description: "Date de chargement dans l'entrepôt"}
+    - {name: effective_date,  type: TIMESTAMP, nullable: false, default: CURRENT_TIMESTAMP, description: "Date de début de validité de cette version"}
+    - {name: expiration_date, type: TIMESTAMP, nullable: true,                              description: "Date de fin de validité (NULL = version courante)"}
+    - {name: is_current,      type: BOOLEAN,   nullable: false, default: true,              description: "Version actuellement active"}
+
+# -----------------------------------------------------------------------
+# COUCHE 1 — STAGING : une table brute par source, aucune transformation.
+# -----------------------------------------------------------------------
+staging:
+  apply_staging_columns: true
+  apply_scd2: false
+  tables:
+
+    raw_youtube_comments:
+      description: "Export brut du dataset YouTube (scores de sentiment déjà calculés)"
+      columns:
+        - {name: comment_id,        type: VARCHAR}
+        - {name: video_id,          type: VARCHAR}
+        - {name: channel_id,        type: VARCHAR}
+        - {name: sentiment_category, type: VARCHAR}
+        - {name: sentiment_score,   type: DOUBLE}
+        - {name: likes,             type: INTEGER}
+        - {name: published_at,      type: TIMESTAMP}
+
+    raw_sentiment140:
+      description: "1.6M tweets réels annotés positif/négatif (Sentiment140)"
+      columns:
+        - {name: tweet_id,   type: BIGINT}
+        - {name: text,       type: VARCHAR}
+        - {name: polarity,   type: INTEGER}
+        - {name: tweet_date, type: TIMESTAMP}
+        - {name: user_handle, type: VARCHAR}
+
+    raw_twitter_fr:
+      description: "1.5M tweets réels en français avec sentiment"
+      columns:
+        - {name: tweet_id,   type: BIGINT}
+        - {name: text,       type: VARCHAR}
+        - {name: sentiment,  type: VARCHAR}
+        - {name: tweet_date, type: TIMESTAMP}
+
+    raw_allocine:
+      description: "Critiques réelles Allociné (texte long, notation)"
+      columns:
+        - {name: review_id,   type: VARCHAR}
+        - {name: text,        type: VARCHAR}
+        - {name: rating,      type: DOUBLE}
+        - {name: review_date, type: TIMESTAMP}
+
+    raw_reddit:
+      description: "Commentaires réels Reddit, diversité de communautés/sujets"
+      columns:
+        - {name: comment_id,  type: VARCHAR}
+        - {name: subreddit,   type: VARCHAR}
+        - {name: text,        type: VARCHAR}
+        - {name: score,       type: INTEGER}
+        - {name: created_at,  type: TIMESTAMP}
+
+    raw_amazon_reviews:
+      description: "Nouveau dataset ajouté après coup — avis produits réels avec note et texte"
+      columns:
+        - {name: review_id,     type: VARCHAR}
+        - {name: product_id,    type: VARCHAR}
+        - {name: text,          type: VARCHAR}
+        - {name: star_rating,   type: INTEGER}
+        - {name: review_date,   type: TIMESTAMP}
+        - {name: verified_purchase, type: BOOLEAN}
+
+# -----------------------------------------------------------------------
+# COUCHE 2 — WAREHOUSE : schéma générique, indépendant de l'organisation.
+# -----------------------------------------------------------------------
+warehouse:
+
+  dimensions:
+    apply_scd2: true
+    apply_staging_columns: false
+    tables:
+
+      dim_source_dataset:
+        description: "Provenance de chaque donnée : institution, entreprise, dataset public..."
+        columns:
+          - {name: source_id,     type: INTEGER, pk: true}
+          - {name: source_name,   type: VARCHAR, nullable: false}
+          - {name: provenance,    type: VARCHAR, description: "public_dataset | saint_jean | ..."}
+          - {name: language,      type: VARCHAR}
+          - {name: license,       type: VARCHAR}
+          - {name: is_synthetic,  type: BOOLEAN, default: false, description: "true si données générées, jamais utilisé pour validation"}
+
+      dim_platform:
+        description: "Réseau social ou plateforme d'origine du contenu"
+        columns:
+          - {name: platform_id,   type: INTEGER, pk: true}
+          - {name: platform_name, type: VARCHAR, nullable: false}
+          - {name: content_type,  type: VARCHAR, description: "texte | vidéo | image | mixte"}
+
+      dim_model:
+        description: "Modèle ou algorithme utilisé pour une prédiction"
+        columns:
+          - {name: model_id,      type: INTEGER, pk: true}
+          - {name: model_name,    type: VARCHAR, nullable: false}
+          - {name: model_version, type: VARCHAR}
+          - {name: model_family,  type: VARCHAR, description: "baseline | linear | tree_ensemble | transformer"}
+
+      dim_user:
+        description: "Comptes d'accès à la plateforme, avec rôle et périmètre (gestion des accès du cahier des charges)"
+        columns:
+          - {name: user_id,          type: INTEGER, pk: true}
+          - {name: username,         type: VARCHAR, nullable: false}
+          - {name: hashed_password,  type: VARCHAR, nullable: false}
+          - {name: role,             type: VARCHAR, nullable: false, description: "institution_admin | scoped_admin"}
+          - {name: scope_source_id,  type: INTEGER, fk: dim_source_dataset.source_id, description: "NULL si institution_admin"}
+          - {name: is_active,        type: BOOLEAN, default: true}
+
+  facts:
+    apply_scd2: true
+    apply_staging_columns: false
+    tables:
+
+      fact_social_post:
+        description: "Publication ou commentaire, une ligne par version (SCD2)"
+        columns:
+          - {name: post_id,           type: BIGINT,  pk: true}
+          - {name: source_id,         type: INTEGER, fk: dim_source_dataset.source_id}
+          - {name: platform_id,       type: INTEGER, fk: dim_platform.platform_id}
+          - {name: external_post_id,  type: VARCHAR, description: "identifiant dans le dataset d'origine"}
+          - {name: text_content,      type: VARCHAR}
+          - {name: published_at,      type: TIMESTAMP}
+          - {name: likes,             type: INTEGER}
+          - {name: comments,          type: INTEGER}
+          - {name: shares,            type: INTEGER}
+          - {name: views,             type: INTEGER}
+
+      fact_sentiment_prediction:
+        description: "Une prédiction de sentiment pour un post, par un modèle donné"
+        columns:
+          - {name: prediction_id,        type: BIGINT,  pk: true}
+          - {name: post_id,              type: BIGINT,  fk: fact_social_post.post_id}
+          - {name: model_id,             type: INTEGER, fk: dim_model.model_id}
+          - {name: sentiment_label,      type: VARCHAR}
+          - {name: positive_probability, type: DOUBLE}
+          - {name: negative_probability, type: DOUBLE}
+          - {name: neutral_probability,  type: DOUBLE}
+          - {name: confidence,           type: DOUBLE}
+          - {name: is_human_validated,   type: BOOLEAN, default: false}
+
+  ml_tracking:
+    apply_scd2: false
+    apply_staging_columns: false
+    tables:
+
+      model_run:
+        description: "Un essai d'entraînement/évaluation : quel algo, sur quelles données, comment"
+        columns:
+          - {name: run_id,          type: BIGINT,  pk: true}
+          - {name: model_id,        type: INTEGER, fk: dim_model.model_id}
+          - {name: source_id,       type: INTEGER, fk: dim_source_dataset.source_id}
+          - {name: task_type,       type: VARCHAR, description: "sentiment | virality | engagement"}
+          - {name: hyperparameters, type: VARCHAR, description: "JSON sérialisé des hyperparamètres"}
+          - {name: train_rows,      type: INTEGER}
+          - {name: test_rows,       type: INTEGER}
+          - {name: split_seed,      type: INTEGER}
+          - {name: run_at,          type: TIMESTAMP, default: CURRENT_TIMESTAMP}
+
+      model_metric:
+        description: "Résultat mesuré pour un run donné (F1, precision, recall, PR-AUC...)"
+        columns:
+          - {name: metric_id,   type: BIGINT, pk: true}
+          - {name: run_id,      type: BIGINT, fk: model_run.run_id}
+          - {name: metric_name, type: VARCHAR, nullable: false}
+          - {name: metric_value, type: DOUBLE, nullable: false}
+          - {name: class_label, type: VARCHAR, description: "classe concernée si métrique par classe, sinon NULL"}
+
+  data_quality:
+    apply_scd2: false
+    apply_staging_columns: false
+    tables:
+
+      dq_checks:
+        description: "Journal des contrôles qualité exécutés à chaque chargement"
+        columns:
+          - {name: check_id,     type: BIGINT,  pk: true}
+          - {name: table_name,   type: VARCHAR, nullable: false}
+          - {name: check_name,   type: VARCHAR, nullable: false, description: "not_null | unique | schema_match | duplicate_rate"}
+          - {name: check_result, type: VARCHAR, description: "PASS | FAIL | WARN"}
+          - {name: rows_checked, type: INTEGER}
+          - {name: rows_failed,  type: INTEGER}
+          - {name: checked_at,   type: TIMESTAMP, default: CURRENT_TIMESTAMP}

@@ -1,0 +1,86 @@
+# Mapping déclaratif staging -> warehouse.
+# Chaque source déclare la même chose : quelle table cible, quelle source_id/platform_id
+# (correspondant à dim_source_dataset / dim_platform), et la correspondance de colonnes.
+#
+# fields: pour chaque colonne de fact_social_post, soit le nom de la colonne
+# staging correspondante, soit `null` si la donnée n'existe pas dans cette source.
+
+mappings:
+
+  raw_sentiment140:
+    target_table: fact_social_post
+    source_id: 2
+    platform_id: 2
+    fields:
+      external_post_id: tweet_id
+      text_content: text
+      published_at: tweet_date
+      likes: null
+      comments: null
+      shares: null
+      views: null
+
+  raw_twitter_fr:
+    target_table: fact_social_post
+    source_id: 3
+    platform_id: 2
+    fields:
+      external_post_id: tweet_id
+      text_content: text
+      published_at: tweet_date
+      likes: null
+      comments: null
+      shares: null
+      views: null
+
+  raw_allocine:
+    target_table: fact_social_post
+    source_id: 4
+    platform_id: 3
+    fields:
+      external_post_id: review_id
+      text_content: text
+      published_at: review_date
+      likes: null
+      comments: null
+      shares: null
+      views: null
+
+  raw_reddit:
+    target_table: fact_social_post
+    source_id: 5
+    platform_id: 4
+    fields:
+      external_post_id: comment_id
+      text_content: text
+      published_at: created_at
+      likes: score
+      comments: null
+      shares: null
+      views: null
+
+  raw_youtube_comments:
+    target_table: fact_social_post
+    source_id: 1
+    platform_id: 1
+    fields:
+      external_post_id: comment_id
+      text_content: null   # dataset sans texte brut, seulement des scores de sentiment
+      published_at: published_at
+      likes: likes
+      comments: null
+      shares: null
+      views: null
+
+  raw_amazon_reviews:
+    target_table: fact_social_post
+    source_id: 6
+    platform_id: 5
+    fields:
+      external_post_id: review_id
+      text_content: text
+      published_at: review_date
+      likes: null
+      comments: null
+      shares: null
+      views: null

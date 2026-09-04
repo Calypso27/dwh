@@ -1,0 +1,19 @@
+# Données volumineuses — ne jamais commiter
+data/raw/*
+!data/raw/.gitkeep
+data/warehouse/*.duckdb
+!data/warehouse/.gitkeep
+
+# SQL et doc régénérés automatiquement (optionnel : à commiter si tu veux figer une version)
+# sql/*.sql
+# docs/data_dictionary.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Système
+.DS_Store
