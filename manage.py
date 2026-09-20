@@ -12,7 +12,16 @@ Point d'entrée unique du projet — toutes les opérations passent par ici.
 """
 import argparse
 import sys
-from dw import schema_generator, warehouse, seed, loader, quality, transform, fetch_samples, combine_datasets, audit, analytics, ml, recommendations, inspect as dw_inspect, pipeline as dw_pipeline, migrate as dw_migrate
+
+# La console Windows utilise cp1252 par défaut, qui ne sait pas encoder les
+# symboles ✓ / ⚠ / ✗ employés dans tous les messages du projet : sans cette
+# ligne, la CLI plante sur un UnicodeEncodeError au premier print, avant même
+# d'avoir affiché le moindre résultat (constaté sur un poste Windows vierge).
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8")
+
+from dw import schema_generator, warehouse, seed, loader, quality, transform, fetch_samples, combine_datasets, audit, analytics, ml, recommendations, labeling, behavior, behavior_report, inspect as dw_inspect, pipeline as dw_pipeline, migrate as dw_migrate
 
 
 def main():
@@ -58,6 +67,18 @@ def main():
     )
     sub.add_parser("audit-data", help="Audite les datasets presents dans data/raw")
     sub.add_parser("build-analytics", help="Construit les tables analytiques du corpus principal")
+
+    sub.add_parser("label-posts",
+                    help="Étiquette thématiquement les publications selon config/taxonomy.yaml")
+    p_behavior = sub.add_parser(
+        "build-behavior",
+        help="Construit la couche comportementale (commentaires en contexte, profils d'auteurs, "
+             "réaction par thème) — ré-étiquette les publications au passage"
+    )
+    p_behavior.add_argument("--skip-labeling", action="store_true",
+                             help="Ne pas ré-étiqueter les publications (réutilise dim_post_theme tel quel)")
+    sub.add_parser("report-behavior",
+                    help="Génère docs/behavioral_analysis_report.md depuis la couche comportementale")
     sub.add_parser("benchmark-ml", help="Benchmark engagement et viralite")
     sub.add_parser("benchmark-sentiment", help="Benchmark sentiment TF-IDF")
     p_predict = sub.add_parser("predict-sentiment", help="Applique le modele sentiment sauvegarde")
@@ -144,6 +165,18 @@ def main():
     elif args.command == "build-analytics":
         analytics.build_principal_posts()
         analytics.build_descriptive_kpis()
+    elif args.command == "label-posts":
+        labeling.build_post_themes()
+    elif args.command == "build-behavior":
+        # L'étiquetage conditionne toute l'analyse par thème : on le rejoue
+        # systématiquement, sauf demande explicite du contraire. Oublier de le
+        # relancer après avoir modifié taxonomy.yaml produirait une analyse
+        # muette, calculée sur les anciennes étiquettes.
+        if not args.skip_labeling:
+            labeling.build_post_themes(warn_cascade=False)
+        behavior.build_all()
+    elif args.command == "report-behavior":
+        behavior_report.generate()
     elif args.command == "benchmark-ml":
         ml.benchmark()
     elif args.command == "benchmark-sentiment":

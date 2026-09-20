@@ -1,6 +1,6 @@
 # Dictionnaire de données — social_analytics_dw
 
-Généré automatiquement depuis `config/schema.yaml` le 2026-09-14 23:38. Ne pas éditer à la main.
+Généré automatiquement depuis `config/schema.yaml` le 2026-09-20 09:31. Ne pas éditer à la main.
 
 
 ## Couche staging
@@ -331,6 +331,88 @@ Une prédiction de sentiment pour un post, par un modèle donné
 | neutral_probability | DOUBLE | — |  |
 | confidence | DOUBLE | — |  |
 | is_human_validated | BOOLEAN | — |  |
+| load_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de chargement dans l'entrepôt |
+| effective_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de début de validité de cette version |
+| expiration_date *(technique, auto-injectée)* | TIMESTAMP | — | Date de fin de validité (NULL = version courante) |
+| is_current *(technique, auto-injectée)* | BOOLEAN | NOT NULL | Version actuellement active |
+
+### `dim_post_theme`
+Étiquette thématique d'une publication, issue de config/taxonomy.yaml
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| external_post_id | VARCHAR | PK |  |
+| page_name | VARCHAR | — | Page émettrice (colonne 'ecole' de la source) |
+| media_type | VARCHAR | — | Format du média : texte | photo | video |
+| theme | VARCHAR | — | Thème retenu, ou 'non_classe' si aucun mot-clé déclenché |
+| matched_keywords | VARCHAR | — | Mots-clés ayant déclenché l'étiquette — rend la décision auditable |
+| match_count | INTEGER | — | Nombre de mots-clés trouvés (proxy de confiance) |
+| published_at | TIMESTAMP | — |  |
+| post_likes | BIGINT | — |  |
+| post_shares | BIGINT | — |  |
+| load_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de chargement dans l'entrepôt |
+| effective_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de début de validité de cette version |
+| expiration_date *(technique, auto-injectée)* | TIMESTAMP | — | Date de fin de validité (NULL = version courante) |
+| is_current *(technique, auto-injectée)* | BOOLEAN | NOT NULL | Version actuellement active |
+
+### `fact_comment_context`
+Un commentaire replacé dans le contexte de sa publication (grain : un commentaire)
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| comment_id | VARCHAR | PK |  |
+| external_post_id | VARCHAR | FK → dim_post_theme.external_post_id |  |
+| author_pseudo | VARCHAR | — |  |
+| page_name | VARCHAR | — |  |
+| theme | VARCHAR | — |  |
+| media_type | VARCHAR | — |  |
+| language | VARCHAR | — |  |
+| commented_at | TIMESTAMP | — |  |
+| published_at | TIMESTAMP | — |  |
+| reaction_delay_hours | DOUBLE | — | Heures écoulées entre la publication et le commentaire |
+| comment_hour | INTEGER | — | Heure du jour (0-23) — rythme d'usage |
+| is_weekend | BOOLEAN | — |  |
+| comment_length | INTEGER | — |  |
+| load_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de chargement dans l'entrepôt |
+| effective_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de début de validité de cette version |
+| expiration_date *(technique, auto-injectée)* | TIMESTAMP | — | Date de fin de validité (NULL = version courante) |
+| is_current *(technique, auto-injectée)* | BOOLEAN | NOT NULL | Version actuellement active |
+
+### `agg_author_behavior`
+Profil comportemental d'un auteur (grain : un auteur)
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| author_pseudo | VARCHAR | PK |  |
+| comment_count | BIGINT | — |  |
+| segment | VARCHAR | — | ponctuel | occasionnel | regulier | engage | hyperactif |
+| distinct_posts | BIGINT | — |  |
+| distinct_themes | BIGINT | — | Diversité thématique — un auteur mono-thème est un militant, un multi-thème un habitué |
+| distinct_pages | BIGINT | — |  |
+| median_delay_hours | DOUBLE | — | Réactivité médiane de l'auteur |
+| avg_comment_length | DOUBLE | — |  |
+| first_seen_at | TIMESTAMP | — |  |
+| last_seen_at | TIMESTAMP | — |  |
+| active_days | BIGINT | — |  |
+| load_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de chargement dans l'entrepôt |
+| effective_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de début de validité de cette version |
+| expiration_date *(technique, auto-injectée)* | TIMESTAMP | — | Date de fin de validité (NULL = version courante) |
+| is_current *(technique, auto-injectée)* | BOOLEAN | NOT NULL | Version actuellement active |
+
+### `agg_theme_reaction`
+Réaction du public par thème et par page (grain : thème x page)
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| theme | VARCHAR | — |  |
+| page_name | VARCHAR | — |  |
+| post_count | BIGINT | — |  |
+| comment_count | BIGINT | — |  |
+| comments_per_post | DOUBLE | — |  |
+| distinct_authors | BIGINT | — |  |
+| median_delay_hours | DOUBLE | — |  |
+| avg_comment_length | DOUBLE | — |  |
+| median_post_likes | DOUBLE | — |  |
 | load_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de chargement dans l'entrepôt |
 | effective_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de début de validité de cette version |
 | expiration_date *(technique, auto-injectée)* | TIMESTAMP | — | Date de fin de validité (NULL = version courante) |

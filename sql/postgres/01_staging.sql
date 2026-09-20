@@ -1,6 +1,6 @@
 -- =========================================================
 -- COUCHE STAGING (postgres) — généré automatiquement, ne pas éditer à la main
--- Source : config/schema.yaml — généré le 2026-09-14T23:38:28
+-- Source : config/schema.yaml — généré le 2026-09-20T09:31:35
 -- =========================================================
 
 -- Export brut du dataset YouTube (texte réel + scores de sentiment déjà calculés)

@@ -1,6 +1,6 @@
 -- =========================================================
 -- COUCHE WAREHOUSE (postgres) — généré automatiquement, ne pas éditer à la main
--- Source : config/schema.yaml — généré le 2026-09-14T23:38:28
+-- Source : config/schema.yaml — généré le 2026-09-20T09:31:35
 -- =========================================================
 
 -- --- groupe : dimensions ---
@@ -173,6 +173,81 @@ CREATE TABLE IF NOT EXISTS "fact_sentiment_prediction" (
     "is_current" BOOLEAN NOT NULL DEFAULT TRUE,
     FOREIGN KEY ("post_id") REFERENCES "fact_social_post"("post_id"),
     FOREIGN KEY ("model_id") REFERENCES "dim_model"("model_id")
+);
+
+-- Étiquette thématique d'une publication, issue de config/taxonomy.yaml
+CREATE TABLE IF NOT EXISTS "dim_post_theme" (
+    "external_post_id" VARCHAR PRIMARY KEY,
+    "page_name" VARCHAR,
+    "media_type" VARCHAR,
+    "theme" VARCHAR,
+    "matched_keywords" VARCHAR,
+    "match_count" INTEGER,
+    "published_at" TIMESTAMP,
+    "post_likes" BIGINT,
+    "post_shares" BIGINT,
+    "load_date" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "effective_date" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiration_date" TIMESTAMP,
+    "is_current" BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- Un commentaire replacé dans le contexte de sa publication (grain : un commentaire)
+CREATE TABLE IF NOT EXISTS "fact_comment_context" (
+    "comment_id" VARCHAR PRIMARY KEY,
+    "external_post_id" VARCHAR,
+    "author_pseudo" VARCHAR,
+    "page_name" VARCHAR,
+    "theme" VARCHAR,
+    "media_type" VARCHAR,
+    "language" VARCHAR,
+    "commented_at" TIMESTAMP,
+    "published_at" TIMESTAMP,
+    "reaction_delay_hours" DOUBLE PRECISION,
+    "comment_hour" INTEGER,
+    "is_weekend" BOOLEAN,
+    "comment_length" INTEGER,
+    "load_date" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "effective_date" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiration_date" TIMESTAMP,
+    "is_current" BOOLEAN NOT NULL DEFAULT TRUE,
+    FOREIGN KEY ("external_post_id") REFERENCES "dim_post_theme"("external_post_id")
+);
+
+-- Profil comportemental d'un auteur (grain : un auteur)
+CREATE TABLE IF NOT EXISTS "agg_author_behavior" (
+    "author_pseudo" VARCHAR PRIMARY KEY,
+    "comment_count" BIGINT,
+    "segment" VARCHAR,
+    "distinct_posts" BIGINT,
+    "distinct_themes" BIGINT,
+    "distinct_pages" BIGINT,
+    "median_delay_hours" DOUBLE PRECISION,
+    "avg_comment_length" DOUBLE PRECISION,
+    "first_seen_at" TIMESTAMP,
+    "last_seen_at" TIMESTAMP,
+    "active_days" BIGINT,
+    "load_date" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "effective_date" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiration_date" TIMESTAMP,
+    "is_current" BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- Réaction du public par thème et par page (grain : thème x page)
+CREATE TABLE IF NOT EXISTS "agg_theme_reaction" (
+    "theme" VARCHAR,
+    "page_name" VARCHAR,
+    "post_count" BIGINT,
+    "comment_count" BIGINT,
+    "comments_per_post" DOUBLE PRECISION,
+    "distinct_authors" BIGINT,
+    "median_delay_hours" DOUBLE PRECISION,
+    "avg_comment_length" DOUBLE PRECISION,
+    "median_post_likes" DOUBLE PRECISION,
+    "load_date" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "effective_date" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiration_date" TIMESTAMP,
+    "is_current" BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 -- --- groupe : ml_tracking ---

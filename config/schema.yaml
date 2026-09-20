@@ -271,6 +271,71 @@ warehouse:
           - {name: confidence,           type: DOUBLE}
           - {name: is_human_validated,   type: BOOLEAN, default: false}
 
+      # ------------------------------------------------------------------
+      # Couche comportementale — répond à « analyser le comportement des
+      # utilisateurs », en liant systématiquement chaque commentaire à la
+      # publication qui l'a provoqué. Un commentaire analysé seul n'a pas
+      # de sens : c'est le couple (publication, réaction) qui en a un.
+      # ------------------------------------------------------------------
+
+      dim_post_theme:
+        description: "Étiquette thématique d'une publication, issue de config/taxonomy.yaml"
+        columns:
+          - {name: external_post_id, type: VARCHAR, pk: true}
+          - {name: page_name,        type: VARCHAR, description: "Page émettrice (colonne 'ecole' de la source)"}
+          - {name: media_type,       type: VARCHAR, description: "Format du média : texte | photo | video"}
+          - {name: theme,            type: VARCHAR, description: "Thème retenu, ou 'non_classe' si aucun mot-clé déclenché"}
+          - {name: matched_keywords, type: VARCHAR, description: "Mots-clés ayant déclenché l'étiquette — rend la décision auditable"}
+          - {name: match_count,      type: INTEGER, description: "Nombre de mots-clés trouvés (proxy de confiance)"}
+          - {name: published_at,     type: TIMESTAMP}
+          - {name: post_likes,       type: BIGINT}
+          - {name: post_shares,      type: BIGINT}
+
+      fact_comment_context:
+        description: "Un commentaire replacé dans le contexte de sa publication (grain : un commentaire)"
+        columns:
+          - {name: comment_id,           type: VARCHAR, pk: true}
+          - {name: external_post_id,     type: VARCHAR, fk: dim_post_theme.external_post_id}
+          - {name: author_pseudo,        type: VARCHAR}
+          - {name: page_name,            type: VARCHAR}
+          - {name: theme,                type: VARCHAR}
+          - {name: media_type,           type: VARCHAR}
+          - {name: language,             type: VARCHAR}
+          - {name: commented_at,         type: TIMESTAMP}
+          - {name: published_at,         type: TIMESTAMP}
+          - {name: reaction_delay_hours, type: DOUBLE, description: "Heures écoulées entre la publication et le commentaire"}
+          - {name: comment_hour,         type: INTEGER, description: "Heure du jour (0-23) — rythme d'usage"}
+          - {name: is_weekend,           type: BOOLEAN}
+          - {name: comment_length,       type: INTEGER}
+
+      agg_author_behavior:
+        description: "Profil comportemental d'un auteur (grain : un auteur)"
+        columns:
+          - {name: author_pseudo,       type: VARCHAR, pk: true}
+          - {name: comment_count,       type: BIGINT}
+          - {name: segment,             type: VARCHAR, description: "ponctuel | occasionnel | regulier | engage | hyperactif"}
+          - {name: distinct_posts,      type: BIGINT}
+          - {name: distinct_themes,     type: BIGINT, description: "Diversité thématique — un auteur mono-thème est un militant, un multi-thème un habitué"}
+          - {name: distinct_pages,      type: BIGINT}
+          - {name: median_delay_hours,  type: DOUBLE, description: "Réactivité médiane de l'auteur"}
+          - {name: avg_comment_length,  type: DOUBLE}
+          - {name: first_seen_at,       type: TIMESTAMP}
+          - {name: last_seen_at,        type: TIMESTAMP}
+          - {name: active_days,         type: BIGINT}
+
+      agg_theme_reaction:
+        description: "Réaction du public par thème et par page (grain : thème x page)"
+        columns:
+          - {name: theme,              type: VARCHAR}
+          - {name: page_name,          type: VARCHAR}
+          - {name: post_count,         type: BIGINT}
+          - {name: comment_count,      type: BIGINT}
+          - {name: comments_per_post,  type: DOUBLE}
+          - {name: distinct_authors,   type: BIGINT}
+          - {name: median_delay_hours, type: DOUBLE}
+          - {name: avg_comment_length, type: DOUBLE}
+          - {name: median_post_likes,  type: DOUBLE}
+
   ml_tracking:
     apply_scd2: false
     apply_staging_columns: false

@@ -1,0 +1,126 @@
+# Taxonomie thématique des publications — répond à la question métier
+# « ce post est-il lié à un événement ? à tel ou tel sujet ? », à laquelle
+# `type_contenu` (texte / photo / vidéo) ne répond pas : celui-ci décrit le
+# FORMAT du média, jamais le SUJET.
+#
+# Méthode : les thèmes ci-dessous ont d'abord été découverts par clustering
+# TF-IDF + KMeans sur les 500 publications (k = 6, 8, 10), puis figés en
+# lexique explicite. Le clustering seul donnait un cluster résiduel absorbant
+# près de la moitié du corpus, et ses termes discriminants étaient pollués par
+# les marqueurs de source (« http bbc », « http cnn ») ; un lexique explicite
+# est à la fois plus stable et défendable devant un jury, parce que chaque
+# étiquette est justifiable par les mots qui l'ont déclenchée.
+#
+# TRANSPOSITION À L'INSTITUT SAINT-JEAN : ne remplacer que le bloc `themes`
+# par les thèmes scolaires (admission, événement, pédagogie, vie étudiante,
+# résultats…). Aucun code n'est à modifier — dw/labeling.py lit ce fichier.
+
+# Nombre minimum de mots-clés à trouver pour qu'un thème soit retenu.
+# À 1, un seul mot suffit : volontaire ici, car les publications sont courtes
+# (médiane ~110 caractères) et un seuil plus élevé ferait chuter la couverture.
+min_occurrences: 1
+
+# Étiquette attribuée quand aucun thème ne se déclenche. Ne jamais la masquer
+# dans les analyses : une couverture partielle assumée vaut mieux qu'un
+# classement forcé, qui fabriquerait des conclusions sur du bruit.
+fallback: non_classe
+
+themes:
+
+  # L'ORDRE COMPTE : en cas d'égalité du nombre de mots-clés trouvés, le thème
+  # déclaré le plus haut l'emporte (cf. dw.labeling.classify). Les thèmes
+  # spécifiques sont donc placés avant les thèmes génériques — sans quoi
+  # « politique » absorberait l'événement « affaire russe », qui en est
+  # pourtant le sujet d'étude le plus intéressant.
+
+  affaire_russe:
+    description: >
+      Affaire des courriels de Donald Trump Jr. — ÉVÉNEMENT ponctuel qui
+      éclate pendant la fenêtre observée (9-14 juillet 2017). C'est
+      l'équivalent structurel d'un « événement » pour l'Institut : un fait
+      daté qui fait basculer le volume et le ton des réactions.
+    mots_cles:
+      - trump jr
+      - russian lawyer
+      - veselnitskaya
+      - collusion
+      - email chain
+      - emails
+      - hillary clinton
+      - russian meddling
+      - special counsel
+      - kushner
+      - meeting
+
+  conflit_international:
+    description: "Guerres, terrorisme, diplomatie, droits humains, tensions géopolitiques"
+    mots_cles: [mosul, isis, syria, iraq, war, north korea, missile, military, troops,
+                refugee, attack, bomb, qatar, sanctions, dissident, human rights,
+                weapons, china, chinese, xiaobo, tibet, israel, iran, nato, border]
+
+  justice_police:
+    description: "Police, enquêtes, procès, disparitions, criminalité"
+    mots_cles: [police, court, lawyer, arrest, charged, investigation, missing,
+                murder, killed, officials say, prison, jail, crime, trial, suspect,
+                illegally, ruling, judge, sentenced, victim]
+
+  sante:
+    description: "Santé, maladies, hôpital, soins, handicap"
+    mots_cles: [cancer, health, hospital, treatment, disease, doctor, patient, nhs,
+                medical, virus, surgeon, surgery, mental health, drug, therapy, disabled]
+
+  environnement_climat:
+    description: "Climat, catastrophes naturelles, faune sauvage, pollution"
+    mots_cles: [climate, flood, rising seas, sea level, global warming, pollution,
+                wildlife, poacher, endangered, ocean, drought, glacier, emissions,
+                conservation, plastic, species]
+
+  technologie:
+    description: "Technologies, numérique, internet, innovation"
+    mots_cles: [app, tech, technology, facial recognition, digital, online, internet,
+                robot, drone, artificial intelligence, smartphone, software, data,
+                algorithm, cyber, social media, facebook, twitter]
+
+  economie_entreprise:
+    description: "Économie, entreprises, emploi, marchés"
+    mots_cles: [company, business, market, jobs, economy, bank, trade, brexit, tax,
+                price, billion, million, shipping, logistics, industry, investors, sales]
+
+  sport:
+    description: "Compétitions, athlètes, résultats sportifs"
+    mots_cles: [murray, tennis, wimbledon, football, baseball, olympic, world cup,
+                match, player, team, sporting, championship, athlete, coach, league,
+                tournament, striker, goal]
+
+  transport_aviation:
+    description: "Aviation, transports, incidents de circulation"
+    mots_cles: [flight, airport, pilot, runway, plane, airline, aviation, passenger,
+                taxiway, boeing, airbus, train, ferry, cruise, traffic]
+
+  culture_science:
+    description: "Culture, patrimoine, sciences, espace, arts"
+    mots_cles: [museum, history, science, space, nasa, art, film, music, rowling,
+                wine, book, festival, exhibition, research, scientists, discovery,
+                photographer, artist, comedy, humor, movie, novel, tourists, beach]
+
+  faits_divers:
+    description: "Incendies, accidents, sauvetages, incidents"
+    mots_cles: [fire, blaze, crash, rescue, accident, storm, sinkhole, collapse,
+                emergency, injured, trapped, stuck, bull, attacked, escaped]
+
+  solidarite:
+    description: "Entraide, générosité, gestes collectifs — forte charge émotionnelle"
+    mots_cles: [help, neighbors, strangers, kindness, volunteer, donate, charity,
+                saved, rescued, community, together, support, raised]
+
+  societe_famille:
+    description: "Famille, éducation, genre, sexualité, questions de société"
+    mots_cles: [family, mother, father, son, daughter, children, school, student,
+                woman, women, transgender, marriage, parents, baby, gay, lesbian,
+                lgbt, sexuality, wedding, young, couple, racism, black, generation]
+
+  politique_gouvernement:
+    description: "Vie politique, exécutif, diplomatie institutionnelle, élections"
+    mots_cles: [trump, president, white house, macron, putin, g20, summit, senate,
+                congress, republican, democrat, campaign, election, vote, minister,
+                government, policy, bill, law, administration, ministers]

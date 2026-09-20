@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = ROOT / "config"
 SCHEMA_FILE = CONFIG_DIR / "schema.yaml"
+TAXONOMY_FILE = CONFIG_DIR / "taxonomy.yaml"
 SQL_DIR = ROOT / "sql"
 DOC_DIR = ROOT / "docs"
 DATA_RAW_DIR = ROOT / "data" / "raw"
