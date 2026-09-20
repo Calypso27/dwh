@@ -1,1 +1,284 @@
-/* You can add global styles to this file, and also import other style files */
+/* ==========================================================================
+   Système de design — source unique des couleurs, espacements et typographie.
+   Avant ce fichier, chaque composant portait ses propres couleurs en dur :
+   changer une teinte imposait de la retrouver dans chaque .ts.
+
+   La palette catégorielle est VALIDÉE (écarts CVD et contraste vérifiés
+   par outil, pas à l'œil) : ne pas remplacer une teinte sans revalider la
+   série complète, l'ordre des emplacements étant lui-même le mécanisme de
+   séparation pour les daltonismes.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Plans et surfaces */
+  --plane:            #f9f9f7;
+  --surface:          #fcfcfb;
+  --surface-sunken:   #f2f1ed;
+  --surface-inverse:  #16161a;
+
+  /* Encres */
+  --ink-primary:      #0b0b0b;
+  --ink-secondary:    #52514e;
+  --ink-muted:        #898781;
+  --ink-on-inverse:   #ffffff;
+
+  /* Traits */
+  --border:           rgba(11, 11, 11, 0.10);
+  --border-strong:    rgba(11, 11, 11, 0.18);
+  --gridline:         #e1e0d9;
+  --baseline:         #c3c2b7;
+
+  /* Palette catégorielle — ordre figé, jamais cyclé */
+  --series-1:         #2a78d6;  /* bleu    */
+  --series-2:         #eb6834;  /* orange  */
+  --series-3:         #1baf7a;  /* aqua    */
+  --series-1-soft:    #cde2fb;
+  --series-2-soft:    #fbdfd3;
+  --series-3-soft:    #cdeee1;
+
+  /* Rampe séquentielle (magnitude continue), une seule teinte clair -> foncé */
+  --seq-100:          #cde2fb;
+  --seq-250:          #86b6ef;
+  --seq-400:          #3987e5;
+  --seq-550:          #1c5cab;
+  --seq-700:          #0d366b;
+
+  /* États — réservés, jamais réutilisés comme couleur de série */
+  --status-good:      #0ca30c;
+  --status-warning:   #fab219;
+  --status-critical:  #d03b3b;
+
+  /* Rythme */
+  --radius-sm:        6px;
+  --radius:           10px;
+  --radius-lg:        14px;
+  --space-1:          4px;
+  --space-2:          8px;
+  --space-3:          12px;
+  --space-4:          16px;
+  --space-5:          24px;
+  --space-6:          32px;
+  --space-7:          48px;
+
+  --shadow-card:      0 1px 2px rgba(11, 11, 11, 0.04), 0 1px 3px rgba(11, 11, 11, 0.06);
+
+  --font-sans:        system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Les valeurs sombres sont redéclarées sous les DEUX portées : la media query
+   suit le réglage système, la portée [data-theme] suit un choix explicite de
+   l'utilisateur, qui doit l'emporter dans les deux sens. */
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --plane:           #0d0d0d;
+    --surface:         #1a1a19;
+    --surface-sunken:  #141413;
+    --surface-inverse: #f2f1ed;
+    --ink-primary:     #ffffff;
+    --ink-secondary:   #c3c2b7;
+    --ink-muted:       #898781;
+    --ink-on-inverse:  #0b0b0b;
+    --border:          rgba(255, 255, 255, 0.10);
+    --border-strong:   rgba(255, 255, 255, 0.20);
+    --gridline:        #2c2c2a;
+    --baseline:        #383835;
+    --series-1:        #3987e5;
+    --series-2:        #d95926;
+    --series-3:        #199e70;
+    --series-1-soft:   #17324f;
+    --series-2-soft:   #4a2314;
+    --series-3-soft:   #10352a;
+    --seq-100:         #0d366b;
+    --seq-250:         #184f95;
+    --seq-400:         #2a78d6;
+    --seq-550:         #5598e7;
+    --seq-700:         #9ec5f4;
+    --shadow-card:     0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.24);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane:           #0d0d0d;
+  --surface:         #1a1a19;
+  --surface-sunken:  #141413;
+  --surface-inverse: #f2f1ed;
+  --ink-primary:     #ffffff;
+  --ink-secondary:   #c3c2b7;
+  --ink-muted:       #898781;
+  --ink-on-inverse:  #0b0b0b;
+  --border:          rgba(255, 255, 255, 0.10);
+  --border-strong:   rgba(255, 255, 255, 0.20);
+  --gridline:        #2c2c2a;
+  --baseline:        #383835;
+  --series-1:        #3987e5;
+  --series-2:        #d95926;
+  --series-3:        #199e70;
+  --series-1-soft:   #17324f;
+  --series-2-soft:   #4a2314;
+  --series-3-soft:   #10352a;
+  --seq-100:         #0d366b;
+  --seq-250:         #184f95;
+  --seq-400:         #2a78d6;
+  --seq-550:         #5598e7;
+  --seq-700:         #9ec5f4;
+  --shadow-card:     0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.24);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--plane);
+  color: var(--ink-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+h1 { font-size: 26px; }
+h2 { font-size: 20px; }
+h3 { font-size: 15px; }
+
+p { margin: 0; }
+
+/* ----- Blocs réutilisables ------------------------------------------------ */
+
+.page {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding-block: var(--space-6);
+  padding-inline: var(--space-5);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+}
+
+.card-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.card-note {
+  color: var(--ink-secondary);
+  font-size: 13px;
+  margin-bottom: var(--space-4);
+  max-width: 68ch;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+/* Tableaux : chiffres alignés verticalement, donc chasse tabulaire. */
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+table.data th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+table.data td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-secondary);
+}
+table.data td.num, table.data th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+table.data td.key { color: var(--ink-primary); font-weight: 500; }
+table.data tbody tr:last-child td { border-bottom: none; }
+table.data tbody tr:hover td { background: var(--surface-sunken); }
+
+.scroll-x { overflow-x: auto; }
+
+/* ----- Motifs de tableau de bord -----------------------------------------
+   Ces blocs vivaient dans la page « Comportement ». Ils sont remontés ici
+   parce qu'ils décrivent des motifs du système (tuile de chiffre, barre
+   comparative, légende, encart de portée) et non une page : toute page
+   d'analyse ultérieure doit pouvoir les réutiliser sans les recopier.
+   ------------------------------------------------------------------------ */
+
+/* Encart de portée — teinte d'état, jamais une couleur de série. */
+.scope {
+  display: flex; gap: var(--space-3); align-items: flex-start;
+  background: color-mix(in srgb, var(--status-warning) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--status-warning) 42%, transparent);
+  border-radius: var(--radius); padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.scope p { font-size: 13px; color: var(--ink-secondary); max-width: 92ch; }
+.scope-icon {
+  flex: none; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--status-warning); color: #3a2a00;
+  font-weight: 700; font-size: 13px; line-height: 20px; text-align: center;
+}
+
+/* Tuiles de chiffres d'en-tête */
+.tiles {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--space-3); margin-bottom: var(--space-4);
+}
+.tile {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
+  padding: var(--space-4); display: flex; flex-direction: column; gap: 2px;
+}
+.figure { font-size: 34px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+.figure .unit { font-size: 18px; font-weight: 500; color: var(--ink-secondary); margin-left: 2px; }
+.sub { font-size: 12px; color: var(--ink-muted); }
+
+/* Légende — identité jamais portée par la couleur seule : la pastille
+   accompagne toujours un libellé écrit. */
+.legend { display: flex; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4); }
+.legend .key { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 12px; color: var(--ink-secondary); }
+.swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; display: inline-block; }
+.swatch.s1 { background: var(--series-1); }
+.swatch.s2 { background: var(--series-2); }
+.swatch.s3 { background: var(--series-3); }
+
+/* Barres comparatives */
+.track { background: var(--surface-sunken); border-radius: 4px; height: 13px; overflow: hidden; }
+.fill { height: 100%; border-radius: 0 4px 4px 0; transition: width .35s cubic-bezier(.4,0,.2,1); min-width: 2px; }
+.fill.s1 { background: var(--series-1); }
+.fill.s2 { background: var(--series-2); }
+.fill.s3 { background: var(--series-3); }
+/* Valeur écrite sur chaque marque : exigée par l'écart de contraste de
+   l'aqua en mode clair, et de toute façon plus lisible qu'une info-bulle. */
+.bar-value { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink-secondary); text-align: right; }
+
+/* Encart de lecture sous un graphique */
+.insight {
+  margin-top: var(--space-4); font-size: 13px; color: var(--ink-secondary);
+  border-left: 2px solid var(--series-1); padding-left: var(--space-3); max-width: 78ch;
+}
+.insight.subtle { border-left-color: var(--border-strong); color: var(--ink-muted); font-size: 12.5px; }

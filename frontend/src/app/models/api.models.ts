@@ -103,3 +103,55 @@ export interface CurrentUser {
   role: string;
   scope_source_id: number | null;
 }
+
+// ---------------------------------------------------------------------------
+// Couche comportementale
+// ---------------------------------------------------------------------------
+
+export interface BehaviorOverview {
+  comment_count: number;
+  post_count: number;
+  author_count: number;
+  theme_count: number;
+  median_delay_hours: number;
+  pct_within_1h: number;
+  pct_within_6h: number;
+  p90_delay_hours: number;
+  period_start: string | null;
+  period_end: string | null;
+}
+
+export interface AuthorSegment {
+  segment: string;
+  author_count: number;
+  author_share: number;
+  comment_count: number;
+  comment_share: number;
+  median_delay_hours: number | null;
+  avg_comment_length: number | null;
+  avg_distinct_themes: number | null;
+}
+
+export interface ThemeReaction {
+  theme: string;
+  post_count: number;
+  comment_count: number;
+  comments_per_post: number;
+  distinct_authors: number;
+  median_delay_hours: number | null;
+  avg_comment_length: number | null;
+}
+
+export interface PageComparison {
+  page_name: string;
+  post_count: number;
+  comment_count: number;
+  author_count: number;
+  median_delay_hours: number | null;
+  avg_comment_length: number | null;
+}
+
+export interface HourlyActivity {
+  hour: number;
+  comment_count: number;
+}

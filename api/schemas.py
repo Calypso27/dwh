@@ -78,3 +78,56 @@ class CurrentUser(BaseModel):
     username: str
     role: str
     scope_source_id: Optional[int] = None
+
+
+# --------------------------------------------------------------------------
+# Couche comportementale — analyse des réactions rapportées à leur publication
+# --------------------------------------------------------------------------
+
+class BehaviorOverview(BaseModel):
+    """Chiffres d'en-tête du tableau de bord comportemental."""
+    comment_count: int
+    post_count: int
+    author_count: int
+    theme_count: int
+    median_delay_hours: float
+    pct_within_1h: float
+    pct_within_6h: float
+    p90_delay_hours: float
+    period_start: Optional[datetime] = None
+    period_end: Optional[datetime] = None
+
+
+class AuthorSegment(BaseModel):
+    segment: str
+    author_count: int
+    author_share: float
+    comment_count: int
+    comment_share: float
+    median_delay_hours: Optional[float] = None
+    avg_comment_length: Optional[float] = None
+    avg_distinct_themes: Optional[float] = None
+
+
+class ThemeReaction(BaseModel):
+    theme: str
+    post_count: int
+    comment_count: int
+    comments_per_post: float
+    distinct_authors: int
+    median_delay_hours: Optional[float] = None
+    avg_comment_length: Optional[float] = None
+
+
+class PageComparison(BaseModel):
+    page_name: str
+    post_count: int
+    comment_count: int
+    author_count: int
+    median_delay_hours: Optional[float] = None
+    avg_comment_length: Optional[float] = None
+
+
+class HourlyActivity(BaseModel):
+    hour: int
+    comment_count: int

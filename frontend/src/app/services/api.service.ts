@@ -6,6 +6,7 @@ import {
   SocialPost, ModelRun, ModelMetric, DQCheck,
   SentimentPrediction, SentimentSummary, SourceDataset, Platform,
   PlatformKpi, Recommendation, Alert,
+  BehaviorOverview, AuthorSegment, ThemeReaction, PageComparison, HourlyActivity,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -67,5 +68,27 @@ export class ApiService {
 
   listAlerts(): Observable<Alert[]> {
     return this.http.get<Alert[]>(`${environment.apiUrl}/alerts`);
+  }
+
+  // --- Couche comportementale ---
+
+  behaviorOverview(): Observable<BehaviorOverview> {
+    return this.http.get<BehaviorOverview>(`${environment.apiUrl}/behavior/overview`);
+  }
+
+  behaviorSegments(): Observable<AuthorSegment[]> {
+    return this.http.get<AuthorSegment[]>(`${environment.apiUrl}/behavior/segments`);
+  }
+
+  behaviorThemes(): Observable<ThemeReaction[]> {
+    return this.http.get<ThemeReaction[]>(`${environment.apiUrl}/behavior/themes`);
+  }
+
+  behaviorPages(): Observable<PageComparison[]> {
+    return this.http.get<PageComparison[]>(`${environment.apiUrl}/behavior/pages`);
+  }
+
+  behaviorHourly(): Observable<HourlyActivity[]> {
+    return this.http.get<HourlyActivity[]>(`${environment.apiUrl}/behavior/hourly`);
   }
 }

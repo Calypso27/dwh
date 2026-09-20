@@ -11,7 +11,7 @@ Documentation interactive générée automatiquement :
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import health, auth_router, posts, metrics
+from api.routers import health, auth_router, posts, metrics, behavior
 
 app = FastAPI(
     title="Saint Jean — API d'analyse de communautés sociales",
@@ -36,3 +36,4 @@ app.include_router(health.router)
 app.include_router(auth_router.router)
 app.include_router(posts.router)
 app.include_router(metrics.router)
+app.include_router(behavior.router)

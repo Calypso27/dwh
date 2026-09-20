@@ -1,6 +1,6 @@
 # Dictionnaire de données — social_analytics_dw
 
-Généré automatiquement depuis `config/schema.yaml` le 2026-09-20 09:31. Ne pas éditer à la main.
+Généré automatiquement depuis `config/schema.yaml` le 2026-09-20 10:42. Ne pas éditer à la main.
 
 
 ## Couche staging
