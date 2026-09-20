@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import {
   SocialPost, ModelRun, ModelMetric, DQCheck,
   SentimentPrediction, SentimentSummary, SourceDataset, Platform,
+  PlatformKpi, Recommendation, Alert,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -54,5 +55,17 @@ export class ApiService {
 
   listPlatforms(): Observable<Platform[]> {
     return this.http.get<Platform[]>(`${environment.apiUrl}/platforms`);
+  }
+
+  platformKpis(): Observable<PlatformKpi[]> {
+    return this.http.get<PlatformKpi[]>(`${environment.apiUrl}/kpis/platform`);
+  }
+
+  listRecommendations(): Observable<Recommendation[]> {
+    return this.http.get<Recommendation[]>(`${environment.apiUrl}/recommendations`);
+  }
+
+  listAlerts(): Observable<Alert[]> {
+    return this.http.get<Alert[]>(`${environment.apiUrl}/alerts`);
   }
 }

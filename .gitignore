@@ -17,3 +17,14 @@ venv/
 
 # Système
 .DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Logs d'exécution
+logs/*.log
+!logs/.gitkeep
+
+# Cache de tests
+.pytest_cache/

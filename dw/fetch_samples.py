@@ -15,23 +15,26 @@ Usage :
     python manage.py fetch-sample --source raw_amazon_reviews --n 20000
     python manage.py fetch-sample --source raw_reddit --n 20000
 """
-import datetime as dt
 import pandas as pd
+from datetime import datetime, timezone
 from dw.paths import DATA_RAW_DIR
 
 
-def _to_iso_utc(value):
-    """Convertit un timestamp Unix (int/float) ou un datetime en ISO 8601 UTC.
-    Gère le cas où `datasets` désérialise déjà created_utc en datetime.datetime
-    plutôt qu'en entier brut."""
+def _to_iso_datetime(value):
+    """
+    Convertit une valeur de date en ISO string, quel que soit son format
+    d'origine. Nécessaire car la librairie `datasets` ne retourne pas
+    toujours le même type pour une colonne de date selon le dataset : parfois
+    un epoch (int/float, secondes depuis 1970), parfois déjà un objet
+    datetime.datetime (si le parquet source stocke un vrai type timestamp).
+    """
     if value is None:
         return None
-    if isinstance(value, dt.datetime):
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=dt.timezone.utc)
+    if isinstance(value, datetime):
         return value.isoformat()
-    return dt.datetime.fromtimestamp(value, dt.timezone.utc).isoformat()
-
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(value, timezone.utc).isoformat()
+    return str(value)  # déjà une chaîne, ou type inattendu : on la laisse telle quelle
 
 # Chaque entrée : quel dataset HF streamer, quel split, comment renommer ses
 # colonnes vers notre schéma, et quels champs manquants synthétiser.
@@ -77,22 +80,32 @@ SAMPLE_CONFIGS = {
         "split": "train",
         "field_map": {"id": "comment_id", "subreddit.name": "subreddit", "body": "text", "score": "score"},
         "synthesize": {
-            "created_at": lambda row, idx: _to_iso_utc(row.get("created_utc")),
+            "created_at": lambda row, idx: _to_iso_datetime(row.get("created_utc")),
         },
         "output_file": "reddit_hf_sample.csv",
     },
 }
 
 
-def fetch_sample(source_key: str, n: int = 20000, shuffle_buffer: int = 10_000, seed: int = 42,
+def fetch_sample(source_key: str, n: int = 20000, shuffle_buffer: int = None, seed: int = 42,
                   _load_dataset_fn=None) -> str:
     """
     Streame `n` lignes depuis Hugging Face et les enregistre en CSV dans data/raw/.
     `_load_dataset_fn` permet d'injecter une fonction de remplacement pour les tests
     (sans réseau) — ne pas fournir en usage normal.
+
+    `shuffle_buffer` : par défaut, adapté automatiquement à `n` (environ 10x, plafonné
+    à 10 000) plutôt que fixé à une grande valeur constante. Un gros buffer force la
+    librairie à précharger beaucoup plus de données que nécessaire même pour un petit
+    échantillon de test — ce qui peut provoquer des coupures réseau évitables sur une
+    connexion instable. Augmente `shuffle_buffer` toi-même si tu veux un mélange plus
+    aléatoire sur un run à grande échelle, une fois la connexion confirmée stable.
     """
     if source_key not in SAMPLE_CONFIGS:
         raise ValueError(f"Source inconnue : {source_key}. Options : {list(SAMPLE_CONFIGS)}")
+
+    if shuffle_buffer is None:
+        shuffle_buffer = min(max(n * 10, 200), 10_000)
 
     cfg = SAMPLE_CONFIGS[source_key]
 
@@ -108,8 +121,6 @@ def fetch_sample(source_key: str, n: int = 20000, shuffle_buffer: int = 10_000, 
 
     rows = []
     for idx, row in enumerate(ds.take(n)):
-        if idx == 0:
-            print("DEBUG row keys:", list(row.keys()))
         mapped = {}
         for hf_field, our_field in cfg["field_map"].items():
             mapped[our_field] = row.get(hf_field)

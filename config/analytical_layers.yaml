@@ -1,0 +1,65 @@
+# Couches analytiques: une source peut alimenter plusieurs usages,
+# mais les metriques ne sont comparees qu'entre colonnes compatibles.
+
+layers:
+  engagement_virality:
+    purpose: "Predire et expliquer l'engagement et la viralite"
+    primary_dataset: multi_platform_social_sentiment_evolution.csv
+    required_columns:
+      - platform
+      - timestamp
+      - followers
+      - likes
+      - shares
+      - comments
+      - views
+      - total_engagement
+      - viral_coefficient
+    optional_columns:
+      - topic
+      - language
+      - media_type
+      - num_hashtags
+      - toxicity_score
+    metric_scales:
+      toxicity_score: "0-100 dans le corpus principal; normaliser a 0-1 dans une couche modele"
+    compatible_datasets:
+      - dataset_publications.csv
+      - dataset_facebook_joint.csv
+
+  nlp_sentiment:
+    purpose: "Entrainer et evaluer les modeles de sentiment"
+    datasets:
+      - Sentiment140.csv
+      - french_tweets.csv
+      - youtube-comments-sentiment.csv
+      - allocine_hf_sample.csv
+      - amazon_reviews_hf_sample.csv
+      - reddit_hf_sample.csv
+      - dataset_commentaires.csv
+    required_conceptual_columns:
+      - text
+    provenance_required: true
+    label_warning: "Les labels de sentiment ne sont pas necessairement comparables entre sources."
+
+  facebook_context:
+    purpose: "Analyser les commentaires avec le contexte de leur publication"
+    primary_dataset: dataset_facebook_joint.csv
+    join_keys:
+      - plateforme
+      - id_publication
+    grain: "une ligne par commentaire"
+    parent_publication_columns:
+      - texte_publication
+      - date_publication
+      - type_contenu
+      - likes
+      - partages
+      - vues
+      - nb_commentaires
+
+rules:
+  - "Conserver source_dataset, platform et language dans chaque couche."
+  - "Ne pas comparer directement score Reddit, likes et ratings."
+  - "Ne pas melanger labels fournis, labels humains et labels produits par un modele."
+  - "Les donnees de commentaires restent distinctes des publications dans les analyses."

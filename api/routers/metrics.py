@@ -51,6 +51,31 @@ def sentiment_summary(db: duckdb.DuckDBPyConnection = Depends(get_db)):
     return [{"sentiment_label": r[0], "count": r[1]} for r in rows]
 
 
+@router.get("/kpis/platform")
+def platform_kpis(db: duckdb.DuckDBPyConnection = Depends(get_db)):
+    rows = db.execute("""
+        SELECT platform_name, post_count, median_engagement,
+               average_engagement, average_engagement_rate,
+               viral_post_count, average_toxicity
+        FROM agg_platform_kpis
+        ORDER BY average_engagement DESC
+    """).fetchall()
+    columns = [d[0] for d in db.description]
+    return [dict(zip(columns, row)) for row in rows]
+
+
+@router.get("/kpis/daily")
+def daily_kpis(db: duckdb.DuckDBPyConnection = Depends(get_db)):
+    rows = db.execute("""
+        SELECT activity_date, post_count, total_engagement,
+               average_viral_coefficient, average_toxicity
+        FROM agg_daily_kpis
+        ORDER BY activity_date
+    """).fetchall()
+    columns = [d[0] for d in db.description]
+    return [dict(zip(columns, row)) for row in rows]
+
+
 @router.get("/model-runs", response_model=List[ModelRun])
 def list_model_runs(db: duckdb.DuckDBPyConnection = Depends(get_db)):
     rows = db.execute("""
@@ -83,5 +108,29 @@ def list_dq_checks(db: duckdb.DuckDBPyConnection = Depends(get_db)):
         "SELECT check_id, table_name, check_name, check_result, rows_checked, rows_failed, checked_at "
         "FROM dq_checks ORDER BY check_id DESC"
     ).fetchall()
+    columns = [d[0] for d in db.description]
+    return [dict(zip(columns, row)) for row in rows]
+
+
+@router.get("/recommendations")
+def list_recommendations(db: duckdb.DuckDBPyConnection = Depends(get_db)):
+    rows = db.execute("""
+        SELECT recommendation_id, platform_name, recommendation_type,
+               recommendation_text, evidence, score, generated_at
+        FROM recommendation
+        ORDER BY score DESC, recommendation_id
+    """).fetchall()
+    columns = [d[0] for d in db.description]
+    return [dict(zip(columns, row)) for row in rows]
+
+
+@router.get("/alerts")
+def list_alerts(db: duckdb.DuckDBPyConnection = Depends(get_db)):
+    rows = db.execute("""
+        SELECT alert_id, platform_name, alert_type, alert_text,
+               severity, evidence, generated_at
+        FROM alert
+        ORDER BY generated_at DESC, alert_id
+    """).fetchall()
     columns = [d[0] for d in db.description]
     return [dict(zip(columns, row)) for row in rows]

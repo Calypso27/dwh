@@ -8,6 +8,8 @@ SOURCE_DATASETS = [
     (4, "Allociné Reviews", "public_dataset", "fr", "voir page Hugging Face", False),
     (5, "Reddit Comments", "public_dataset", "en", "voir page Hugging Face", False),
     (6, "Amazon Reviews", "public_dataset", "en", "voir page source", False),
+    (7, "Facebook Comments + Publications", "public_dataset", "en", "dataset local", False),
+    (8, "Multi-platform Social Sentiment Evolution", "public_dataset", "multi", "dataset local", False),
 ]
 
 PLATFORMS = [
@@ -19,6 +21,7 @@ PLATFORMS = [
     (6, "Facebook", "mixte"),
     (7, "Instagram", "mixte"),
     (8, "LinkedIn", "texte"),
+    (9, "Multi-platform", "mixte"),
 ]
 
 MODELS = [
@@ -29,6 +32,11 @@ MODELS = [
     (5, "XGBoost", "1.0", "tree_ensemble"),
     (6, "cardiffnlp/twitter-xlm-roberta-base-sentiment", "1.0", "transformer"),
     (7, "DistilCamemBERT-sentiment", "1.0", "transformer"),
+    (8, "Ridge", "1.0", "linear"),
+    (9, "RandomForestRegressor", "1.0", "tree_ensemble"),
+    (10, "DummyRegressor", "1.0", "baseline"),
+    (11, "TFIDF-LogisticRegression", "1.0", "linear"),
+    (12, "TFIDF-LinearSVM", "1.0", "linear"),
 ]
 
 

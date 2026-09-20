@@ -1,19 +1,20 @@
 # Dictionnaire de données — social_analytics_dw
 
-Généré automatiquement depuis `config/schema.yaml` le 2026-09-04 13:12. Ne pas éditer à la main.
+Généré automatiquement depuis `config/schema.yaml` le 2026-09-14 23:38. Ne pas éditer à la main.
 
 
 ## Couche staging
 
 
 ### `raw_youtube_comments`
-Export brut du dataset YouTube (scores de sentiment déjà calculés)
+Export brut du dataset YouTube (texte réel + scores de sentiment déjà calculés)
 
 | Colonne | Type | Contraintes | Description |
 |---|---|---|---|
 | comment_id | VARCHAR | — |  |
 | video_id | VARCHAR | — |  |
 | channel_id | VARCHAR | — |  |
+| text | VARCHAR | — |  |
 | sentiment_category | VARCHAR | — |  |
 | sentiment_score | DOUBLE | — |  |
 | likes | INTEGER | — |  |
@@ -82,6 +83,68 @@ Nouveau dataset ajouté après coup — avis produits réels avec note et texte
 | star_rating | INTEGER | — |  |
 | review_date | TIMESTAMP | — |  |
 | verified_purchase | BOOLEAN | — |  |
+| ingested_at *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de réception en zone de staging |
+| source_file *(technique, auto-injectée)* | VARCHAR | — | Nom du fichier ou export source d'origine |
+
+### `raw_facebook_comments`
+Commentaires Facebook enrichis avec le contexte de leur publication
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| plateforme | VARCHAR | — |  |
+| id_commentaire | VARCHAR | — |  |
+| id_publication | VARCHAR | — |  |
+| pseudo_auteur | VARCHAR | — |  |
+| texte | VARCHAR | — |  |
+| date_commentaire | TIMESTAMP | — |  |
+| langue | VARCHAR | — |  |
+| texte_publication | VARCHAR | — |  |
+| date_publication | TIMESTAMP | — |  |
+| type_contenu | VARCHAR | — |  |
+| ecole | VARCHAR | — |  |
+| likes | INTEGER | — |  |
+| partages | INTEGER | — |  |
+| vues | INTEGER | — |  |
+| nb_commentaires | INTEGER | — |  |
+| ingested_at *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de réception en zone de staging |
+| source_file *(technique, auto-injectée)* | VARCHAR | — | Nom du fichier ou export source d'origine |
+
+### `raw_multi_platform_posts`
+Corpus principal de 150 000 publications multi-plateformes
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| post_id | VARCHAR | — |  |
+| platform | VARCHAR | — |  |
+| timestamp | TIMESTAMP | — |  |
+| date | DATE | — |  |
+| hour_of_day | INTEGER | — |  |
+| day_of_week | VARCHAR | — |  |
+| is_weekend | BOOLEAN | — |  |
+| user_id | VARCHAR | — |  |
+| followers | BIGINT | — |  |
+| account_age_days | INTEGER | — |  |
+| verified | BOOLEAN | — |  |
+| topic | VARCHAR | — |  |
+| language | VARCHAR | — |  |
+| content_length | INTEGER | — |  |
+| media_type | VARCHAR | — |  |
+| num_hashtags | INTEGER | — |  |
+| sentiment_category | VARCHAR | — |  |
+| sentiment_positive | DOUBLE | — |  |
+| sentiment_negative | DOUBLE | — |  |
+| sentiment_neutral | DOUBLE | — |  |
+| likes | BIGINT | — |  |
+| shares | BIGINT | — |  |
+| comments | BIGINT | — |  |
+| views | BIGINT | — |  |
+| total_engagement | BIGINT | — |  |
+| engagement_rate_per_1k_followers | DOUBLE | — |  |
+| hours_since_post | DOUBLE | — |  |
+| viral_coefficient | DOUBLE | — |  |
+| cross_platform_spread | DOUBLE | — |  |
+| toxicity_score | DOUBLE | — |  |
+| location | VARCHAR | — |  |
 | ingested_at *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de réception en zone de staging |
 | source_file *(technique, auto-injectée)* | VARCHAR | — | Nom du fichier ou export source d'origine |
 
@@ -170,6 +233,90 @@ Publication ou commentaire, une ligne par version (SCD2)
 | expiration_date *(technique, auto-injectée)* | TIMESTAMP | — | Date de fin de validité (NULL = version courante) |
 | is_current *(technique, auto-injectée)* | BOOLEAN | NOT NULL | Version actuellement active |
 
+### `fact_post_analytics`
+Mesures analytiques conservees au grain publication
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| analytics_id | BIGINT | PK |  |
+| source_id | INTEGER | FK → dim_source_dataset.source_id |  |
+| external_post_id | VARCHAR | — |  |
+| platform_name | VARCHAR | — |  |
+| published_at | TIMESTAMP | — |  |
+| followers | BIGINT | — |  |
+| topic | VARCHAR | — |  |
+| language | VARCHAR | — |  |
+| media_type | VARCHAR | — |  |
+| num_hashtags | INTEGER | — |  |
+| sentiment_category | VARCHAR | — |  |
+| sentiment_positive | DOUBLE | — |  |
+| sentiment_negative | DOUBLE | — |  |
+| sentiment_neutral | DOUBLE | — |  |
+| likes | BIGINT | — |  |
+| shares | BIGINT | — |  |
+| comments | BIGINT | — |  |
+| views | BIGINT | — |  |
+| total_engagement | BIGINT | — |  |
+| engagement_rate_per_1k_followers | DOUBLE | — |  |
+| viral_coefficient | DOUBLE | — |  |
+| cross_platform_spread | DOUBLE | — |  |
+| toxicity_score | DOUBLE | — |  |
+| load_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de chargement dans l'entrepôt |
+| effective_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de début de validité de cette version |
+| expiration_date *(technique, auto-injectée)* | TIMESTAMP | — | Date de fin de validité (NULL = version courante) |
+| is_current *(technique, auto-injectée)* | BOOLEAN | NOT NULL | Version actuellement active |
+
+### `agg_platform_kpis`
+KPI descriptifs agreges par plateforme
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| platform_name | VARCHAR | PK |  |
+| post_count | BIGINT | — |  |
+| median_engagement | DOUBLE | — |  |
+| average_engagement | DOUBLE | — |  |
+| average_engagement_rate | DOUBLE | — |  |
+| viral_post_count | BIGINT | — |  |
+| average_toxicity | DOUBLE | — |  |
+| load_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de chargement dans l'entrepôt |
+| effective_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de début de validité de cette version |
+| expiration_date *(technique, auto-injectée)* | TIMESTAMP | — | Date de fin de validité (NULL = version courante) |
+| is_current *(technique, auto-injectée)* | BOOLEAN | NOT NULL | Version actuellement active |
+
+### `agg_daily_kpis`
+KPI descriptifs agreges par jour
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| activity_date | DATE | PK |  |
+| post_count | BIGINT | — |  |
+| total_engagement | BIGINT | — |  |
+| average_viral_coefficient | DOUBLE | — |  |
+| average_toxicity | DOUBLE | — |  |
+| load_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de chargement dans l'entrepôt |
+| effective_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de début de validité de cette version |
+| expiration_date *(technique, auto-injectée)* | TIMESTAMP | — | Date de fin de validité (NULL = version courante) |
+| is_current *(technique, auto-injectée)* | BOOLEAN | NOT NULL | Version actuellement active |
+
+### `agg_segment_kpis`
+KPI descriptifs par theme, media, langue, sentiment et classe de hashtags
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| segment_id | BIGINT | PK |  |
+| dimension_name | VARCHAR | — |  |
+| dimension_value | VARCHAR | — |  |
+| post_count | BIGINT | — |  |
+| median_engagement | DOUBLE | — |  |
+| average_engagement | DOUBLE | — |  |
+| average_engagement_rate | DOUBLE | — |  |
+| viral_post_count | BIGINT | — |  |
+| average_toxicity | DOUBLE | — |  |
+| load_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de chargement dans l'entrepôt |
+| effective_date *(technique, auto-injectée)* | TIMESTAMP | NOT NULL | Date de début de validité de cette version |
+| expiration_date *(technique, auto-injectée)* | TIMESTAMP | — | Date de fin de validité (NULL = version courante) |
+| is_current *(technique, auto-injectée)* | BOOLEAN | NOT NULL | Version actuellement active |
+
 ### `fact_sentiment_prediction`
 Une prédiction de sentiment pour un post, par un modèle donné
 
@@ -218,6 +365,32 @@ Résultat mesuré pour un run donné (F1, precision, recall, PR-AUC...)
 | metric_value | DOUBLE | NOT NULL |  |
 | class_label | VARCHAR | — | classe concernée si métrique par classe, sinon NULL |
 
+### `recommendation`
+Recommandation explicable generee a partir des KPI
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| recommendation_id | BIGINT | PK |  |
+| platform_name | VARCHAR | — |  |
+| recommendation_type | VARCHAR | — |  |
+| recommendation_text | VARCHAR | — |  |
+| evidence | VARCHAR | — |  |
+| score | DOUBLE | — |  |
+| generated_at | TIMESTAMP | — |  |
+
+### `alert`
+Alerte explicable sur sentiment ou toxicite
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| alert_id | BIGINT | PK |  |
+| platform_name | VARCHAR | — |  |
+| alert_type | VARCHAR | — |  |
+| alert_text | VARCHAR | — |  |
+| severity | VARCHAR | — |  |
+| evidence | VARCHAR | — |  |
+| generated_at | TIMESTAMP | — |  |
+
 ## Warehouse — Contrôle qualité
 
 
@@ -233,3 +406,31 @@ Journal des contrôles qualité exécutés à chaque chargement
 | rows_checked | INTEGER | — |  |
 | rows_failed | INTEGER | — |  |
 | checked_at | TIMESTAMP | — |  |
+
+### `pipeline_runs`
+Historique des exécutions planifiées du pipeline (cron) — succès, échecs, durée, volumes traités
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| run_id | BIGINT | PK |  |
+| trigger_type | VARCHAR | — | scheduled | manual | api |
+| started_at | TIMESTAMP | NOT NULL |  |
+| finished_at | TIMESTAMP | — |  |
+| status | VARCHAR | — | RUNNING | SUCCESS | FAILED |
+| sources_processed | INTEGER | — |  |
+| total_new_rows | INTEGER | — |  |
+| total_updated_rows | INTEGER | — |  |
+| error_message | VARCHAR | — |  |
+
+### `ingestion_log`
+Registre des chargements (hash de fichier) — empêche de recharger deux fois le même fichier par erreur
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| log_id | BIGINT | PK |  |
+| file_hash | VARCHAR | NOT NULL | SHA-256 du contenu brut du fichier |
+| file_name | VARCHAR | — |  |
+| table_name | VARCHAR | NOT NULL |  |
+| row_count | INTEGER | — |  |
+| status | VARCHAR | — | LOADED | SKIPPED_DUPLICATE | FORCED_RELOAD |
+| loaded_at | TIMESTAMP | — |  |

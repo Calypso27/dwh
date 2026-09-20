@@ -1,0 +1,59 @@
+# Profils de chargement par source — appliqués automatiquement par `load`,
+# sans avoir à retaper --column-names / --rename-columns / --generate-id à
+# chaque fois. C'est précisément ce qui aurait évité l'incident réel où
+# french_tweets.csv a été chargé une première fois SANS --generate-id
+# (avant que le profil n'existe), laissant tweet_id entièrement NULL pour
+# cette charge.
+#
+# Un flag explicite passé en ligne de commande reste toujours prioritaire
+# sur le profil (le profil ne fait que fournir une valeur par défaut).
+#
+# `file` : nom attendu du fichier dans data/raw/, utilisé par
+# `python manage.py load-all` pour recharger toutes les sources en une
+# seule commande, sans avoir à retaper chaque --file/--table à la main.
+# Change cette valeur si ton fichier source porte un autre nom chez toi.
+
+profiles:
+
+  raw_sentiment140:
+    file: Sentiment140.csv
+    # Le fichier Kaggle original n'a pas de ligne d'en-tête.
+    column_names: [polarity, tweet_id, tweet_date, flag, user_handle, text]
+
+  raw_twitter_fr:
+    file: french_tweets.csv
+    # Ce dataset ne fournit ni identifiant ni date, et nomme sa colonne "label".
+    rename_columns: {label: sentiment}
+    generate_id: [tweet_id]
+
+  raw_youtube_comments:
+    file: youtube-comments-sentiment.csv
+    # Colonnes réelles du fichier Kaggle, différentes de notre schéma interne.
+    rename_columns:
+      CommentID: comment_id
+      VideoID: video_id
+      AuthorChannelID: channel_id
+      CommentText: text
+      Sentiment: sentiment_category
+      Likes: likes
+      PublishedAt: published_at
+
+  # Ces trois sources viennent de `fetch-sample` (échantillonnage Hugging Face) —
+  # le nom de fichier correspond exactement à `output_file` dans
+  # dw/fetch_samples.py, donc `load-all` les retrouve automatiquement après
+  # un `fetch-sample` sans configuration supplémentaire.
+  raw_allocine:
+    file: allocine_hf_sample.csv
+
+  raw_amazon_reviews:
+    file: amazon_reviews_hf_sample.csv
+
+  raw_reddit:
+    file: reddit_hf_sample.csv
+
+  raw_facebook_comments:
+    file: dataset_facebook_joint.csv
+    sep: ";"
+
+  raw_multi_platform_posts:
+    file: multi_platform_social_sentiment_evolution.csv

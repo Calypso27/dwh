@@ -27,6 +27,13 @@ saint_jean_dw/
 └── tests/
 ```
 
+Les usages analytiques sont declares dans
+[`config/analytical_layers.yaml`](config/analytical_layers.yaml) :
+le corpus principal alimente l'engagement et la viralite, tandis que les
+corpus textuels alimentent le NLP. Les sources restent conservees dans le
+warehouse et ne sont pas fusionnees lorsque leurs metriques ne sont pas
+comparables.
+
 ## Installation (une seule fois)
 
 ```bash
@@ -71,6 +78,19 @@ python manage.py status
 ```bash
 python3 -c "import duckdb; duckdb.connect('data/warehouse/social_analytics_dw.duckdb').sql('SELECT * FROM dq_checks').show()"
 ```
+
+## Afficher les en-têtes de tous les datasets
+
+Le notebook `notebooks/explorer_entetes_datasets.ipynb` parcourt
+automatiquement `data/raw/` et affiche les colonnes de chaque fichier, y
+compris les fichiers Facebook séparés par `;` et `Sentiment140.csv` sans
+en-tête.
+
+Depuis la racine du projet :
+
+```bash
+jupyter notebook notebooks/explorer_entetes_datasets.ipynb
+```
 Ou installe le CLI DuckDB et lance `duckdb data/warehouse/social_analytics_dw.duckdb`.
 
 ## API REST
@@ -94,6 +114,10 @@ Documentation interactive auto-générée : http://localhost:8000/docs
 | GET | `/model-runs` | Liste les essais de modèles ML | non |
 | GET | `/model-runs/{id}/metrics` | Métriques d'un essai (F1, PR-AUC...) | non |
 | GET | `/dq-checks` | Journal des contrôles qualité | non |
+| GET | `/kpis/platform` | KPI descriptifs par plateforme | non |
+| GET | `/kpis/daily` | KPI descriptifs par jour | non |
+| GET | `/recommendations` | Recommandations explicables | non |
+| GET | `/alerts` | Alertes qualité/toxicité | non |
 
 ### Comptes de démonstration (MVP — à remplacer par une vraie table `users`)
 
@@ -158,6 +182,140 @@ disponible ici) : commence toujours par `--n 100` avant un run à grande
 Point notable sur Reddit : le dataset sépare posts et commentaires dans
 des **configurations distinctes** (`comments` vs `posts`) — déjà pris en
 compte dans `dw/fetch_samples.py` (`config_name: "comments"`).
+
+## Protection contre les chargements en double
+
+### Facebook : joindre publications et commentaires
+
+Les deux exports Facebook sont joints sur `plateforme` et `id_publication`.
+La commande crée `data/raw/dataset_facebook_joint.csv`, ensuite déclaré comme
+une source de staging ordinaire :
+
+```bash
+python manage.py combine-social
+python manage.py load-all --pipeline
+```
+
+Chaque ligne du dataset joint correspond à un commentaire et contient aussi
+les colonnes de sa publication (`texte_publication`, `likes`, `partages`,
+`vues`, etc.). La jointure est une `LEFT JOIN` : un commentaire sans
+publication correspondante est conservé.
+
+Chaque fichier chargé est identifié par son hash SHA-256. Recharger le même
+fichier dans la même table est **bloqué par défaut** (résout l'incident réel
+où `french_tweets.csv` a été chargé 3 fois par erreur, polluant `raw_twitter_fr`) :
+
+```bash
+python manage.py load --file mon_fichier.csv --table raw_reddit
+python manage.py load --file mon_fichier.csv --table raw_reddit
+# ⚠⚠ CE FICHIER A DÉJÀ ÉTÉ CHARGÉ ... Chargement ANNULÉ
+
+python manage.py load --file mon_fichier.csv --table raw_reddit --force  # rechargement volontaire
+```
+Chaque tentative (réussie, bloquée, ou forcée) est journalisée dans `ingestion_log`.
+
+## Prédictions sentiment français et anglais par lots
+
+Le benchmark sentiment combine `french_tweets.csv` et `Sentiment140.csv` après
+normalisation de leurs labels. Le modèle sauvegardé peut ensuite reprendre un
+traitement interrompu sans dupliquer les prédictions déjà présentes, pour les
+sources française et anglaise :
+
+```bash
+python manage.py predict-sentiment --max-rows 100000 --batch-size 5000
+```
+
+Pour recalculer volontairement les prédictions :
+
+```bash
+python manage.py predict-sentiment --no-resume --batch-size 5000
+```
+
+Un corpus externe structuré peut aussi être enrichi sans modifier le Warehouse :
+
+```bash
+python manage.py predict-sentiment --input corpus.csv \
+  --output corpus_scored.csv --text-column text --batch-size 5000
+```
+
+## Profils de chargement déclaratifs
+
+`config/load_profiles.yaml` déclare, par table, les options de chargement
+récurrentes (renommage de colonnes, génération d'identifiant, absence
+d'en-tête) — appliquées **automatiquement**, sans avoir à les retaper à
+chaque fois :
+
+```bash
+# Plus besoin de --rename-columns/--generate-id : le profil s'en charge
+python manage.py load --file french_tweets.csv --table raw_twitter_fr
+```
+Un flag explicite passé en ligne de commande reste toujours prioritaire sur
+le profil. Pour ajouter une nouvelle source récurrente, ajoute simplement
+une entrée dans `config/load_profiles.yaml`.
+
+## ⚠️ Corriger une source sans perdre les autres
+
+**Ne jamais utiliser `init --reset`** pour rattraper un schéma qui a évolué
+ou corriger une source — ça efface TOUTE la base. Deux commandes sûres à la
+place :
+
+### La base a pris du retard sur config/schema.yaml (nouvelle table/colonne ajoutée)
+
+```bash
+python manage.py migrate --dry-run   # voir ce qui manque, sans rien modifier
+python manage.py migrate             # créer les tables/colonnes manquantes, aucune donnée touchée
+```
+C'est la situation la plus fréquente en cours de développement : dès qu'une
+table ou une colonne est ajoutée dans `config/schema.yaml`, relance `migrate`
+au lieu de `init --reset`.
+
+### Une seule table a des données à corriger
+
+```bash
+python manage.py truncate --table raw_twitter_fr           # avertit, ne supprime rien
+python manage.py truncate --table raw_twitter_fr --confirm  # supprime vraiment, cette table seule
+```
+
+`init --reset` ne devrait plus jamais être nécessaire une fois le projet en
+cours d'utilisation — seulement au tout premier lancement.
+
+## Automatisation — planification récurrente (cron)
+
+`python manage.py pipeline` journalise chaque exécution dans `pipeline_runs`
+(succès, échec, durée, volumes traités) et dans `logs/pipeline.log` — conçu
+pour tourner **sans supervision humaine**. En cas d'échec, le code de sortie
+du processus est non-nul, pour que le planificateur système le détecte.
+
+### Windows — Planificateur de tâches
+
+```powershell
+schtasks /create /tn "SaintJeanDW_Pipeline" /tr "'C:\chemin\vers\.venv\Scripts\python.exe' 'C:\chemin\vers\saint_jean_dw\manage.py' pipeline --trigger scheduled" /sc daily /st 02:00
+```
+Vérifier : `schtasks /query /tn "SaintJeanDW_Pipeline" /v`
+Supprimer : `schtasks /delete /tn "SaintJeanDW_Pipeline" /f`
+
+### Linux / macOS — cron
+
+```bash
+crontab -e
+# Ajouter la ligne (tous les jours à 2h du matin) :
+0 2 * * * cd /chemin/vers/saint_jean_dw && .venv/bin/python manage.py pipeline --trigger scheduled >> logs/cron.log 2>&1
+```
+
+### Consulter l'historique des exécutions
+
+```bash
+python manage.py history
+python manage.py history --limit 30
+```
+
+### Pourquoi une tâche planifiée peut échouer sans que rien ne s'affiche
+
+C'est justement le problème que `pipeline_runs` + `logs/pipeline.log`
+résolvent : personne ne regarde une console à 2h du matin. Toujours
+vérifier `python manage.py history` après avoir mis en place la
+planification, pour confirmer que la première exécution automatique s'est
+bien déroulée.
 
 ## Transformation staging → warehouse (SCD2)
 

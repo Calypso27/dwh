@@ -25,11 +25,12 @@ staging:
   tables:
 
     raw_youtube_comments:
-      description: "Export brut du dataset YouTube (scores de sentiment déjà calculés)"
+      description: "Export brut du dataset YouTube (texte réel + scores de sentiment déjà calculés)"
       columns:
         - {name: comment_id,        type: VARCHAR}
         - {name: video_id,          type: VARCHAR}
         - {name: channel_id,        type: VARCHAR}
+        - {name: text,              type: VARCHAR}
         - {name: sentiment_category, type: VARCHAR}
         - {name: sentiment_score,   type: DOUBLE}
         - {name: likes,             type: INTEGER}
@@ -78,6 +79,60 @@ staging:
         - {name: star_rating,   type: INTEGER}
         - {name: review_date,   type: TIMESTAMP}
         - {name: verified_purchase, type: BOOLEAN}
+
+    raw_facebook_comments:
+      description: "Commentaires Facebook enrichis avec le contexte de leur publication"
+      columns:
+        - {name: plateforme, type: VARCHAR}
+        - {name: id_commentaire, type: VARCHAR}
+        - {name: id_publication, type: VARCHAR}
+        - {name: pseudo_auteur, type: VARCHAR}
+        - {name: texte, type: VARCHAR}
+        - {name: date_commentaire, type: TIMESTAMP}
+        - {name: langue, type: VARCHAR}
+        - {name: texte_publication, type: VARCHAR}
+        - {name: date_publication, type: TIMESTAMP}
+        - {name: type_contenu, type: VARCHAR}
+        - {name: ecole, type: VARCHAR}
+        - {name: likes, type: INTEGER}
+        - {name: partages, type: INTEGER}
+        - {name: vues, type: INTEGER}
+        - {name: nb_commentaires, type: INTEGER}
+
+    raw_multi_platform_posts:
+      description: "Corpus principal de 150 000 publications multi-plateformes"
+      columns:
+        - {name: post_id, type: VARCHAR}
+        - {name: platform, type: VARCHAR}
+        - {name: timestamp, type: TIMESTAMP}
+        - {name: date, type: DATE}
+        - {name: hour_of_day, type: INTEGER}
+        - {name: day_of_week, type: VARCHAR}
+        - {name: is_weekend, type: BOOLEAN}
+        - {name: user_id, type: VARCHAR}
+        - {name: followers, type: BIGINT}
+        - {name: account_age_days, type: INTEGER}
+        - {name: verified, type: BOOLEAN}
+        - {name: topic, type: VARCHAR}
+        - {name: language, type: VARCHAR}
+        - {name: content_length, type: INTEGER}
+        - {name: media_type, type: VARCHAR}
+        - {name: num_hashtags, type: INTEGER}
+        - {name: sentiment_category, type: VARCHAR}
+        - {name: sentiment_positive, type: DOUBLE}
+        - {name: sentiment_negative, type: DOUBLE}
+        - {name: sentiment_neutral, type: DOUBLE}
+        - {name: likes, type: BIGINT}
+        - {name: shares, type: BIGINT}
+        - {name: comments, type: BIGINT}
+        - {name: views, type: BIGINT}
+        - {name: total_engagement, type: BIGINT}
+        - {name: engagement_rate_per_1k_followers, type: DOUBLE}
+        - {name: hours_since_post, type: DOUBLE}
+        - {name: viral_coefficient, type: DOUBLE}
+        - {name: cross_platform_spread, type: DOUBLE}
+        - {name: toxicity_score, type: DOUBLE}
+        - {name: location, type: VARCHAR}
 
 # -----------------------------------------------------------------------
 # COUCHE 2 — WAREHOUSE : schéma générique, indépendant de l'organisation.
@@ -143,6 +198,66 @@ warehouse:
           - {name: shares,            type: INTEGER}
           - {name: views,             type: INTEGER}
 
+      fact_post_analytics:
+        description: "Mesures analytiques conservees au grain publication"
+        columns:
+          - {name: analytics_id, type: BIGINT, pk: true}
+          - {name: source_id, type: INTEGER, fk: dim_source_dataset.source_id}
+          - {name: external_post_id, type: VARCHAR}
+          - {name: platform_name, type: VARCHAR}
+          - {name: published_at, type: TIMESTAMP}
+          - {name: followers, type: BIGINT}
+          - {name: topic, type: VARCHAR}
+          - {name: language, type: VARCHAR}
+          - {name: media_type, type: VARCHAR}
+          - {name: num_hashtags, type: INTEGER}
+          - {name: sentiment_category, type: VARCHAR}
+          - {name: sentiment_positive, type: DOUBLE}
+          - {name: sentiment_negative, type: DOUBLE}
+          - {name: sentiment_neutral, type: DOUBLE}
+          - {name: likes, type: BIGINT}
+          - {name: shares, type: BIGINT}
+          - {name: comments, type: BIGINT}
+          - {name: views, type: BIGINT}
+          - {name: total_engagement, type: BIGINT}
+          - {name: engagement_rate_per_1k_followers, type: DOUBLE}
+          - {name: viral_coefficient, type: DOUBLE}
+          - {name: cross_platform_spread, type: DOUBLE}
+          - {name: toxicity_score, type: DOUBLE}
+
+      agg_platform_kpis:
+        description: "KPI descriptifs agreges par plateforme"
+        columns:
+          - {name: platform_name, type: VARCHAR, pk: true}
+          - {name: post_count, type: BIGINT}
+          - {name: median_engagement, type: DOUBLE}
+          - {name: average_engagement, type: DOUBLE}
+          - {name: average_engagement_rate, type: DOUBLE}
+          - {name: viral_post_count, type: BIGINT}
+          - {name: average_toxicity, type: DOUBLE}
+
+      agg_daily_kpis:
+        description: "KPI descriptifs agreges par jour"
+        columns:
+          - {name: activity_date, type: DATE, pk: true}
+          - {name: post_count, type: BIGINT}
+          - {name: total_engagement, type: BIGINT}
+          - {name: average_viral_coefficient, type: DOUBLE}
+          - {name: average_toxicity, type: DOUBLE}
+
+      agg_segment_kpis:
+        description: "KPI descriptifs par theme, media, langue, sentiment et classe de hashtags"
+        columns:
+          - {name: segment_id, type: BIGINT, pk: true}
+          - {name: dimension_name, type: VARCHAR}
+          - {name: dimension_value, type: VARCHAR}
+          - {name: post_count, type: BIGINT}
+          - {name: median_engagement, type: DOUBLE}
+          - {name: average_engagement, type: DOUBLE}
+          - {name: average_engagement_rate, type: DOUBLE}
+          - {name: viral_post_count, type: BIGINT}
+          - {name: average_toxicity, type: DOUBLE}
+
       fact_sentiment_prediction:
         description: "Une prédiction de sentiment pour un post, par un modèle donné"
         columns:
@@ -183,6 +298,28 @@ warehouse:
           - {name: metric_value, type: DOUBLE, nullable: false}
           - {name: class_label, type: VARCHAR, description: "classe concernée si métrique par classe, sinon NULL"}
 
+      recommendation:
+        description: "Recommandation explicable generee a partir des KPI"
+        columns:
+          - {name: recommendation_id, type: BIGINT, pk: true}
+          - {name: platform_name, type: VARCHAR}
+          - {name: recommendation_type, type: VARCHAR}
+          - {name: recommendation_text, type: VARCHAR}
+          - {name: evidence, type: VARCHAR}
+          - {name: score, type: DOUBLE}
+          - {name: generated_at, type: TIMESTAMP, default: CURRENT_TIMESTAMP}
+
+      alert:
+        description: "Alerte explicable sur sentiment ou toxicite"
+        columns:
+          - {name: alert_id, type: BIGINT, pk: true}
+          - {name: platform_name, type: VARCHAR}
+          - {name: alert_type, type: VARCHAR}
+          - {name: alert_text, type: VARCHAR}
+          - {name: severity, type: VARCHAR}
+          - {name: evidence, type: VARCHAR}
+          - {name: generated_at, type: TIMESTAMP, default: CURRENT_TIMESTAMP}
+
   data_quality:
     apply_scd2: false
     apply_staging_columns: false
@@ -198,3 +335,27 @@ warehouse:
           - {name: rows_checked, type: INTEGER}
           - {name: rows_failed,  type: INTEGER}
           - {name: checked_at,   type: TIMESTAMP, default: CURRENT_TIMESTAMP}
+
+      pipeline_runs:
+        description: "Historique des exécutions planifiées du pipeline (cron) — succès, échecs, durée, volumes traités"
+        columns:
+          - {name: run_id,            type: BIGINT,  pk: true}
+          - {name: trigger_type,      type: VARCHAR, description: "scheduled | manual | api"}
+          - {name: started_at,        type: TIMESTAMP, nullable: false}
+          - {name: finished_at,       type: TIMESTAMP}
+          - {name: status,            type: VARCHAR, description: "RUNNING | SUCCESS | FAILED"}
+          - {name: sources_processed, type: INTEGER}
+          - {name: total_new_rows,    type: INTEGER}
+          - {name: total_updated_rows, type: INTEGER}
+          - {name: error_message,     type: VARCHAR}
+
+      ingestion_log:
+        description: "Registre des chargements (hash de fichier) — empêche de recharger deux fois le même fichier par erreur"
+        columns:
+          - {name: log_id,      type: BIGINT,  pk: true}
+          - {name: file_hash,   type: VARCHAR, nullable: false, description: "SHA-256 du contenu brut du fichier"}
+          - {name: file_name,   type: VARCHAR}
+          - {name: table_name,  type: VARCHAR, nullable: false}
+          - {name: row_count,   type: INTEGER}
+          - {name: status,      type: VARCHAR, description: "LOADED | SKIPPED_DUPLICATE | FORCED_RELOAD"}
+          - {name: loaded_at,   type: TIMESTAMP, default: CURRENT_TIMESTAMP}

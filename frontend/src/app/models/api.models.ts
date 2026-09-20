@@ -68,6 +68,36 @@ export interface Platform {
   content_type: string | null;
 }
 
+export interface PlatformKpi {
+  platform_name: string;
+  post_count: number;
+  median_engagement: number;
+  average_engagement: number;
+  average_engagement_rate: number;
+  viral_post_count: number;
+  average_toxicity: number;
+}
+
+export interface Recommendation {
+  recommendation_id: number;
+  platform_name: string;
+  recommendation_type: string;
+  recommendation_text: string;
+  evidence: string;
+  score: number;
+  generated_at: string;
+}
+
+export interface Alert {
+  alert_id: number;
+  platform_name: string;
+  alert_type: string;
+  alert_text: string;
+  severity: string;
+  evidence: string;
+  generated_at: string;
+}
+
 export interface CurrentUser {
   username: string;
   role: string;

@@ -65,7 +65,7 @@ mappings:
     platform_id: 1
     fields:
       external_post_id: comment_id
-      text_content: null   # dataset sans texte brut, seulement des scores de sentiment
+      text_content: text
       published_at: published_at
       likes: likes
       comments: null
@@ -84,3 +84,29 @@ mappings:
       comments: null
       shares: null
       views: null
+
+  raw_facebook_comments:
+    target_table: fact_social_post
+    source_id: 7
+    platform_id: 6
+    fields:
+      external_post_id: id_commentaire
+      text_content: texte
+      published_at: date_commentaire
+      likes: null
+      comments: nb_commentaires
+      shares: partages
+      views: vues
+
+  raw_multi_platform_posts:
+    target_table: fact_social_post
+    source_id: 8
+    platform_id: 9
+    fields:
+      external_post_id: post_id
+      text_content: null
+      published_at: timestamp
+      likes: likes
+      comments: comments
+      shares: shares
+      views: views

@@ -59,12 +59,59 @@ def check_type_consistency(con, table):
     """).fetchall()
     total_rows = con.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
     for (col,) in numeric_cols:
-        # Une valeur numérique négative dans un compteur d'engagement est incohérente
-        if col in ("likes", "comments", "shares", "views", "score"):
+        # Une valeur numérique négative est incohérente pour un COMPTEUR (likes,
+        # comments, shares, views) — mais PAS pour 'score' (Reddit : votes positifs
+        # moins votes négatifs, un score net légitimement négatif est normal).
+        if col in ("likes", "comments", "shares", "views"):
             bad = con.execute(f'SELECT COUNT(*) FROM "{table}" WHERE "{col}" < 0').fetchone()[0]
             result = "PASS" if bad == 0 else "WARN"
             _log_check(con, table, f"type_consistency_{col}_non_negative", result, total_rows, bad)
             print(f"✓ type_consistency_{col}_non_negative : {result} ({bad:,} valeurs négatives)")
+
+
+def check_range(con, table, column, minimum=0.0, maximum=None):
+    """Contrôle les valeurs non nulles d'une colonne numérique bornée."""
+    exists = con.execute(
+        f"SELECT 1 FROM information_schema.columns "
+        f"WHERE table_name = '{table}' AND column_name = '{column}'"
+    ).fetchone()
+    if not exists:
+        return
+    total_rows = con.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+    upper_clause = "" if maximum is None else f' OR "{column}" > ?'
+    params = [minimum] if maximum is None else [minimum, maximum]
+    invalid = con.execute(
+        f'SELECT COUNT(*) FROM "{table}" '
+        f'WHERE "{column}" IS NOT NULL AND ("{column}" < ?{upper_clause})',
+        params,
+    ).fetchone()[0]
+    result = "PASS" if invalid == 0 else "WARN"
+    _log_check(con, table, f"range_{column}", result, total_rows, invalid)
+    upper_label = "inf" if maximum is None else maximum
+    print(f"✓ range_{column} : {result} ({invalid:,} valeurs hors [{minimum}, {upper_label}])")
+
+
+def check_engagement_consistency(con, table):
+    """Vérifie que l'engagement total correspond aux trois compteurs."""
+    columns = {
+        row[0] for row in con.execute(
+            f"SELECT column_name FROM information_schema.columns WHERE table_name = '{table}'"
+        ).fetchall()
+    }
+    required = {"total_engagement", "likes", "shares", "comments"}
+    if not required.issubset(columns):
+        return
+    total_rows = con.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+    invalid = con.execute(f"""
+        SELECT COUNT(*)
+        FROM "{table}"
+        WHERE total_engagement IS NOT NULL
+          AND likes IS NOT NULL AND shares IS NOT NULL AND comments IS NOT NULL
+          AND total_engagement != likes + shares + comments
+    """).fetchone()[0]
+    result = "PASS" if invalid == 0 else "WARN"
+    _log_check(con, table, "engagement_total_consistent", result, total_rows, invalid)
+    print(f"✓ engagement_total_consistent : {result} ({invalid:,} incohérences)")
 
 
 # Colonnes considérées critiques (candidates naturelles de clé métier) par table
@@ -75,6 +122,8 @@ KEY_COLUMNS_BY_TABLE = {
     "raw_reddit": ["comment_id", "text"],
     "raw_youtube_comments": ["comment_id"],
     "raw_amazon_reviews": ["review_id", "text"],
+    "raw_multi_platform_posts": ["post_id"],
+    "raw_facebook_comments": ["id_commentaire", "texte"],
 }
 
 
@@ -86,5 +135,19 @@ def run(table: str):
     check_duplicates(con, table, total_rows)
     check_null_rate(con, table, total_rows, KEY_COLUMNS_BY_TABLE.get(table, []))
     check_type_consistency(con, table)
+    if table == "raw_multi_platform_posts":
+        bounded_columns = {
+            "sentiment_positive": (0.0, 1.0),
+            "sentiment_negative": (0.0, 1.0),
+            "sentiment_neutral": (0.0, 1.0),
+            "cross_platform_spread": (0.0, 1.0),
+            # Le corpus principal encode la toxicite sur [0, 100].
+            "toxicity_score": (0.0, 100.0),
+            "engagement_rate_per_1k_followers": (0.0, None),
+            "viral_coefficient": (0.0, None),
+        }
+        for column, (minimum, maximum) in bounded_columns.items():
+            check_range(con, table, column, minimum, maximum)
+        check_engagement_consistency(con, table)
 
     con.close()
